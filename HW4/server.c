@@ -12,7 +12,7 @@ int main(int argc, char *argv[])
 {
 	int serv_sd, clnt_sd;
 	FILE * fp;
-	char buf[BUF_SIZE];
+	char buf[BUF_SIZE]= {0,};
 	int read_cnt;
 	
 	struct sockaddr_in serv_adr, clnt_adr;
@@ -23,8 +23,12 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 	
-	fp=fopen("copy.txt", "rb"); 
+	fp=fopen("text.txt", "r"); 
+	fread(buf,sizeof(buf),1,fp);
 	serv_sd=socket(PF_INET, SOCK_STREAM, 0);   
+
+	int enable = 1;
+	setsockopt(serv_sd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int));
 	
 	memset(&serv_adr, 0, sizeof(serv_adr));
 	serv_adr.sin_family=AF_INET;
@@ -37,24 +41,18 @@ int main(int argc, char *argv[])
 	clnt_adr_sz=sizeof(clnt_adr);    
 	clnt_sd=accept(serv_sd, (struct sockaddr*)&clnt_adr, &clnt_adr_sz);
 	
-	while(1)
-	{
-		read_cnt=fread((void*)buf, 1, BUF_SIZE, fp);
-		if(read_cnt<BUF_SIZE)
-		{
-			write(clnt_sd, buf, read_cnt);
-			break;
-		}
-		write(clnt_sd, buf, BUF_SIZE);
-	}
+	write(clnt_sd,buf,BUF_SIZE);
+
 	
 	shutdown(clnt_sd, SHUT_WR);	
 	read(clnt_sd, buf, BUF_SIZE);
-	printf("Message from client: %s \n", buf);
+	printf("Message from client\n%s \n", buf);
 	
 	fclose(fp);
 	close(clnt_sd); close(serv_sd);
+	
 	return 0;
+	
 }
 
 void error_handling(char *message)
