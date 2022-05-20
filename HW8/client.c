@@ -27,8 +27,13 @@ int main(int argc, char *argv[])
 	pthread_t snd_thread, rcv_thread; //2가지의 쓰레드를 생성
 	void * thread_return;
 	if(argc!=4) {
-		printf("Usage : %s <IP> <port> <name>\n", argv[0]);
+		printf("Usage : %s <port> <ID> <name>\n", argv[0]);
 		exit(1);
+	 }
+
+	 if(strlen(argv[3]) != 4){
+		 printf("ID have to be 4\n");
+		 exit(1);
 	 }
 	
 	sprintf(name, "[%s]", argv[3]);
@@ -39,16 +44,16 @@ int main(int argc, char *argv[])
 	// 소켓 연결
 	memset(&serv_addr, 0, sizeof(serv_addr));
 	serv_addr.sin_family=AF_INET;
-	serv_addr.sin_addr.s_addr=inet_addr(argv[1]);
-	serv_addr.sin_port=htons(atoi(argv[2]));
+	serv_addr.sin_addr.s_addr=inet_addr(argv[2]);
+	serv_addr.sin_port=htons(atoi(argv[1]));
 	  
 	if(connect(sock, (struct sockaddr*)&serv_addr, sizeof(serv_addr))==-1)
 		error_handling("connect() error");
 	
 	//스레드 생성
 
-	pthread_create(&snd_thread, NULL, send_msg, (void*)&sock);
 	pthread_create(&rcv_thread, NULL, recv_msg, (void*)&sock);
+	pthread_create(&snd_thread, NULL, send_msg, (void*)&sock);
 	pthread_join(snd_thread, &thread_return); // 쓰레드의 종료를 대기
 	pthread_join(rcv_thread, &thread_return); // 쓰레드의 종료를 대기
 	close(sock);  
@@ -73,7 +78,8 @@ void * send_msg(void * arg)   // send thread main
 		scanf("%d", &opnd_cnt);
 		if (opnd_cnt <= 0 || opnd_cnt >= 128)
 		{
-			write(sock, &opnd_cnt, 4);
+			printf("Overflow Number(%d)\n",opnd_cnt);
+			write(sock,&opnd_cnt,4);
 			close(sock);
 			return 0;
 		}
@@ -112,6 +118,7 @@ void * recv_msg(void * arg)   // read thread main
 			return (void*)-1;
 		name_msg[str_len]=0;
 		fputs(name_msg, stdout);
+		printf("\n");
 	}
 	return NULL;
 }

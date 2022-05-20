@@ -56,7 +56,7 @@ int main(int argc, char *argv[])
 	
 		pthread_create(&t_id, NULL, handle_clnt, (void*)&clnt_sock);
 		pthread_detach(t_id);
-		printf("Connected client IP: %s \n", inet_ntoa(clnt_adr.sin_addr));
+		printf("Connected client Port: %d \n", (clnt_adr.sin_port));
 	}
 	close(serv_sock);
 	return 0;
@@ -80,35 +80,28 @@ void * handle_clnt(void * arg)
 	while ((str_len = readv(clnt_sock, vec, 2)) != -1) // socket에서 데이터 읽음
 	{
 		int opnd_cnt = (int)buf2[0];
-		printf("ID : %s\n",buf1);
-		printf("server opnd cnt : %d\n",opnd_cnt);
 		int opinfo[255];
 		char operationinfo[255];
+		char *newmsg = buf1;
 		
 		if (opnd_cnt <= 0 || opnd_cnt >= 128)
 		{
-			char check = 0;
-			check = opnd_cnt;
-			printf("Server close(%d)\n", check);
-			// close(clnt_sock);
-			// close(serv_sock);
+			printf("Closed Client\n");
+			char check = opnd_cnt; 
+			close(clnt_sock);
 			return 0;
 		}
 
 		int opidx = 1;
 		for (int i = 0; i < opnd_cnt; i++)
 		{
-			printf("opidx : %d\n",opidx);
 			opinfo[i] = (int)buf2[opidx];
-			printf("Operand %d : %d\n", i, opinfo[i]);
 			opidx+=4;
 		}
 		int operator;
-		printf("opidx : %d\n",opidx);
 		for (int i = 0; i < opnd_cnt - 1; i++)
 		{
 			operationinfo[i] = buf2[opidx++];
-			printf("Operator %d : %c\n",i,operationinfo[i]);
 		}
 
 		int res = opinfo[0];
@@ -131,9 +124,16 @@ void * handle_clnt(void * arg)
 			j++;
 			area++;
 		}
-		printf("Operation result : %d\n", res);
+		char temp1[255];
+		sprintf(temp1,"%d",res);
+		char temp2[255] = " result = ";
+		strcat(temp2, temp1);
+		strcat(newmsg, temp2);
+		char final[255] = "\n";
+		strcat(final, newmsg);
 
-		send_msg(msg, str_len);
+
+		send_msg(final, strlen(final));		
 	}
 	pthread_mutex_lock(&mutx);
 
@@ -142,14 +142,16 @@ void * handle_clnt(void * arg)
 	{
 		if(clnt_sock==clnt_socks[i])
 		{
-			while(i++<clnt_cnt-1)
+			while(i++<clnt_cnt-1){
 				clnt_socks[i]=clnt_socks[i+1];
+			}
 			break;
 		}
 	}
 
 	clnt_cnt--;
 	pthread_mutex_unlock(&mutx);
+	printf("Closed Client");
 	close(clnt_sock);
 
 	return NULL;
